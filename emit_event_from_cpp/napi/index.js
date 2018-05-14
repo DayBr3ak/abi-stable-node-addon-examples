@@ -18,3 +18,12 @@ emitter.on("end", name => {
 
 addon.callEmit("producer1", emitter.emit.bind(emitter));
 addon.callEmit("producer2", emitter.emit.bind(emitter));
+
+const promise = addon.setTimeoutPromise(3000);
+promise
+  .then(data => {
+    console.log("producer3", data);
+  })
+  .catch(data => {
+    console.log("caught", data);
+  });

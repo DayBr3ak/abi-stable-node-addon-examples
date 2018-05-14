@@ -2,7 +2,9 @@
 #define __SAFE_QUEUE_H
 
 #include <queue>
+#include <vector>
 #include <mutex>
+#include <stdarg.h>
 
 template<class T>
 class ThreadSafeQueue {
@@ -16,6 +18,24 @@ public:
     }
     std::unique_lock<std::mutex> lock(m);
     qu.push(elem);
+    return true;
+  }
+
+  bool emplace(int n, T elem, ...) {
+    if (n <= 0) {
+      return false;
+    }
+    va_list targs;
+    std::unique_lock<std::mutex> lock(m);
+
+    va_start(targs, n);
+    for (int i = 0; i < n; i++) {
+      T& t = va_arg(targs, T);
+      if (t != nullptr) {
+        qu.push(t);
+      }
+    }
+    va_end(targs);
     return true;
   }
 

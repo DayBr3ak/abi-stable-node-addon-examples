@@ -1,5 +1,6 @@
 #include "napi_itc_queue.h"
 #include "thread_safe_queue.h"
+#include <uv.h>
 
 static inline void maybe_throw_fatal(napi_env env, napi_status status, int line) {
   bool is_pending;
@@ -149,6 +150,11 @@ void napi_itc_complete(napi_itc_handle handle) {
 
 void napi_itc_send(napi_itc_handle handle, void* data) {
   ((napi_itc_handle_t*)handle)->consumerQu.push(data);
+  uv_async_send((uv_async_t*)handle);
+}
+
+void napi_itc_send_and_complete(napi_itc_handle handle, void* data) {
+  ((napi_itc_handle_t*)handle)->consumerQu.emplace(2, data, QUEUE_STOP);
   uv_async_send((uv_async_t*)handle);
 }
 

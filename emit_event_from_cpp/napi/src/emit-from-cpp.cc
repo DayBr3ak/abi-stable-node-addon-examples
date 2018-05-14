@@ -8,6 +8,7 @@
 #include <assert.h>
 
 #include "napi_itc_queue.h"
+#include "napi_itc_promise.h"
 
 // Helper
 #define NAPI_CALL(env, call)                                                   \
@@ -47,8 +48,7 @@ static void threadRoutine(napi_itc_handle handle, string name) {
     napi_itc_send(handle, new MyData("data", name + "..." + to_string(i)));
   }
 
-  napi_itc_send(handle, new MyData("end", name));
-  napi_itc_complete(handle);
+  napi_itc_send_and_complete(handle, new MyData("end", name));
 }
 
 // this fonction is ran on the nodejs loop
@@ -92,10 +92,49 @@ static napi_value CallEmit(napi_env env, napi_callback_info info) {
   return nullptr;
 }
 
+static napi_status resolver(napi_env env, void* userdata, void* data, bool is_success, napi_value* out) {
+  // serialize cpp object to js object;
+  // free memory if necessary
+  if (is_success) {
+    napi_create_string_utf8(env, ((string*)data)->c_str(), NAPI_AUTO_LENGTH, out);
+  } else {
+    napi_create_string_utf8(env, "failed", NAPI_AUTO_LENGTH, out);
+  }
+  delete data;
+  return napi_ok;
+}
+
+static void threadRoutinePromise(napi_itc_promise_handle handle, int64_t mil) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(mil));
+  napi_itc_promise_reject(handle, new string("producer3 RESOLVED")); // should be freed
+}
+
+static napi_value SetTimeoutPromise(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value argv[1], promise;
+  napi_deferred deferred;
+  NAPI_CALL(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr));
+
+  int64_t mil;
+  NAPI_CALL(env, napi_get_value_int64(env, argv[0], &mil));
+  NAPI_CALL(env, napi_create_promise(env, &deferred, &promise));
+
+  napi_itc_promise_handle handle;
+  NAPI_CALL(env, napi_itc_promise_init(env, deferred, resolver, nullptr, &handle));
+
+  thread t(threadRoutinePromise, handle, mil);
+  t.detach();
+
+  return promise;
+}
+
 static napi_value Init(napi_env env, napi_value exports) {
-  napi_value callEmit;
+  napi_value callEmit, setTimeoutPromise;
   NAPI_CALL(env, napi_create_function(env, "", 0, CallEmit, nullptr, &callEmit));
-  NAPI_CALL(env, napi_set_named_property(env, exports, "callEmit", callEmit))
+  NAPI_CALL(env, napi_set_named_property(env, exports, "callEmit", callEmit));
+
+  NAPI_CALL(env, napi_create_function(env, "", 0, SetTimeoutPromise, nullptr, &setTimeoutPromise));
+  NAPI_CALL(env, napi_set_named_property(env, exports, "setTimeoutPromise", setTimeoutPromise));
   return exports;
 }
 

@@ -4,7 +4,8 @@
       "target_name": "emit_from_cpp",
       "sources": [
         "src/emit-from-cpp.cc",
-        "src/napi_itc_queue.cc"
+        "src/napi_itc_queue.cc",
+        "src/napi_itc_promise.cc"
       ],
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],

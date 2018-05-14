@@ -2,7 +2,6 @@
 #define __NAPI_ITC_QUEUE_H
 
 #include <node_api.h>
-#include <uv.h>
 
 #ifdef __cplusplus
   #define EXTERN_C_START extern "C" {
@@ -34,6 +33,7 @@ napi_status napi_itc_init(
 
 void napi_itc_send(napi_itc_handle ctx, void* data);
 void napi_itc_complete(napi_itc_handle handle);
+void napi_itc_send_and_complete(napi_itc_handle handle, void* data);
 
 EXTERN_C_END
 
